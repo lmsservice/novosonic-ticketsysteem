@@ -6,6 +6,7 @@
 <title>NOVOSONIC Support Desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://alcdn.msauth.net/browser/3.13.0/js/msal-browser.min.js"></script>
 <style>
   :root{
     --bg:#0D1117; --surface:#141A21; --surface-hover:#1B222B; --border:#242C36; --border-light:#2E3844;
@@ -26,8 +27,18 @@
   ::-webkit-scrollbar-track{background:transparent;}
   @keyframes pingdot{0%{transform:scale(1);opacity:.5;}75%,100%{transform:scale(2.4);opacity:0;}}
   @keyframes scanline{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+  @keyframes spin{to{transform:rotate(360deg);}}
 
   #app{display:flex;height:100vh;overflow:hidden;}
+
+  .center-screen{width:100%;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px;}
+  .spinner{width:28px;height:28px;border-radius:50%;border:3px solid var(--border-light);border-top-color:var(--accent);animation:spin 0.8s linear infinite;}
+  .login-btn{display:flex;align-items:center;gap:8px;background:var(--accent);color:#04211D;border:none;border-radius:8px;padding:11px 20px;font-weight:600;font-size:14px;}
+  .error-box{max-width:480px;background:var(--surface);border:1px solid var(--high);border-radius:10px;padding:18px 20px;color:var(--text2);font-size:13px;text-align:left;}
+  .error-box b{color:var(--high);}
+  .retry-btn{margin-top:12px;background:var(--surface-hover);border:1px solid var(--border-light);color:var(--text);border-radius:7px;padding:8px 14px;font-size:13px;font-weight:600;}
+  .top-banner{position:fixed;top:0;left:0;right:0;background:var(--high-dim);border-bottom:1px solid var(--high);color:var(--high);font-size:12.5px;padding:8px 16px;display:flex;justify-content:space-between;align-items:center;z-index:100;}
+  .top-banner button{background:transparent;border:none;color:var(--high);font-weight:600;}
 
   .rail{width:232px;border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;}
   .rail-header{padding:20px 20px 16px;border-bottom:1px solid var(--border);}
@@ -42,7 +53,9 @@
   .nav-item-label{display:flex;align-items:center;gap:8px;}
   .nav-item-count{font-size:11.5px;color:var(--text3);}
   .rail-footer{margin-top:auto;padding:16px;border-top:1px solid var(--border);font-size:11.5px;color:var(--text3);display:flex;align-items:center;gap:8px;}
-  .avatar{width:24px;height:24px;border-radius:50%;background:var(--surface-hover);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text2);}
+  .avatar{width:24px;height:24px;border-radius:50%;background:var(--surface-hover);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text2);flex-shrink:0;}
+  .rail-footer-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .signout-link{margin-left:auto;background:transparent;border:none;color:var(--text3);font-size:11px;text-decoration:underline;flex-shrink:0;}
 
   .dot{position:relative;display:inline-flex;width:7px;height:7px;flex-shrink:0;}
   .dot-ping{position:absolute;inset:0;border-radius:50%;}
@@ -65,27 +78,6 @@
   .ticket-company{font-size:12px;color:var(--text2);}
   .badge{font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:4px;}
   .empty-note{padding:24px;color:var(--text3);font-size:13px;text-align:center;}
-
-  .dashboard-wrap{flex:1;overflow-y:auto;padding:26px 30px;}
-  .dashboard-title{font-size:20px;font-weight:600;}
-  .dashboard-sub{font-size:13px;color:var(--text2);margin-top:4px;}
-  .stats-row{display:flex;gap:14px;margin:22px 0 26px;}
-  .stat-card{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
-  .stat-value{font-size:26px;font-weight:700;}
-  .stat-label{font-size:12px;color:var(--text2);margin-top:4px;display:flex;align-items:center;gap:6px;}
-  .kanban{display:flex;gap:16px;align-items:flex-start;}
-  .kanban-col{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;max-height:calc(100vh - 260px);}
-  .kanban-col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);flex-shrink:0;}
-  .kanban-col-title{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;}
-  .kanban-col-count{font-size:12px;color:var(--text3);}
-  .kanban-cards{display:flex;flex-direction:column;gap:10px;overflow-y:auto;}
-  .kanban-card{display:block;width:100%;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
-  .kanban-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
-  .kanban-card-id{font-size:10px;color:var(--text3);}
-  .kanban-card-subject{font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text);}
-  .kanban-card-bottom{display:flex;justify-content:space-between;align-items:center;}
-  .kanban-card-company{font-size:11.5px;color:var(--text2);}
-  .kanban-empty{color:var(--text3);font-size:12px;padding:8px 2px;}
 
   .detail-col{flex:1;display:flex;flex-direction:column;min-width:0;}
   .detail-empty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px;}
@@ -121,6 +113,7 @@
   #replyInput{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13.5px;outline:none;resize:none;}
   #sendBtn{display:flex;align-items:center;gap:6px;background:var(--border);color:var(--text3);border:none;border-radius:8px;padding:10px 16px;font-weight:600;font-size:13px;height:40px;}
   #sendBtn.ready{background:var(--accent);color:#04211D;}
+  #sendBtn:disabled{opacity:0.6;}
 
   .modal-overlay{position:fixed;inset:0;background:rgba(4,6,9,.7);display:none;align-items:center;justify-content:center;z-index:50;}
   .modal-overlay.open{display:flex;}
@@ -137,12 +130,55 @@
   .btn-secondary{padding:9px 16px;border-radius:7px;background:transparent;border:1px solid var(--border);color:var(--text2);font-size:13px;font-weight:600;}
   .btn-primary{padding:9px 16px;border-radius:7px;background:var(--border);border:none;color:var(--text3);font-size:13px;font-weight:600;}
   .btn-primary.ready{background:var(--accent);color:#04211D;}
+  .btn-primary:disabled{opacity:0.7;}
+
+  .dashboard-wrap{flex:1;overflow-y:auto;padding:26px 30px;}
+  .dashboard-title{font-size:20px;font-weight:600;}
+  .dashboard-sub{font-size:13px;color:var(--text2);margin-top:4px;}
+  .stats-row{display:flex;gap:14px;margin:22px 0 26px;}
+  .stat-card{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;}
+  .stat-value{font-size:26px;font-weight:700;}
+  .stat-label{font-size:12px;color:var(--text2);margin-top:4px;display:flex;align-items:center;gap:6px;}
+  .kanban{display:flex;gap:16px;align-items:flex-start;}
+  .kanban-col{flex:1;min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;max-height:calc(100vh - 260px);}
+  .kanban-col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);flex-shrink:0;}
+  .kanban-col-title{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13.5px;}
+  .kanban-col-count{font-size:12px;color:var(--text3);}
+  .kanban-cards{display:flex;flex-direction:column;gap:10px;overflow-y:auto;}
+  .kanban-card{display:block;width:100%;text-align:left;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+  .kanban-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .kanban-card-id{font-size:10px;color:var(--text3);}
+  .kanban-card-subject{font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text);}
+  .kanban-card-bottom{display:flex;justify-content:space-between;align-items:center;}
+  .kanban-card-company{font-size:11.5px;color:var(--text2);}
+  .kanban-empty{color:var(--text3);font-size:12px;padding:8px 2px;}
 </style>
 </head>
 <body>
 <div id="app"></div>
 
 <script>
+/* ============================== CONFIG ============================== */
+const MSAL_CONFIG = {
+  auth: {
+    clientId: '8b20cabf-9744-4d84-a072-5f0968997884',
+    authority: 'https://login.microsoftonline.com/6022bd84-014c-40cc-9465-ba85a837f20a',
+    redirectUri: 'https://lmsservice.github.io/novosonic-ticketsysteem/',
+  },
+  cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false },
+};
+const GRAPH_SCOPES = ['User.Read', 'Sites.ReadWrite.All'];
+const SITE_HOSTNAME = 'jsholding2.sharepoint.com';
+const SITE_PATH = '/sites/LMSDistribution';
+const TICKETS_LIST_NAME = 'Tickets';
+const MESSAGES_LIST_NAME = 'TicketReacties';
+
+const PRIORITY_TO_NL = { high: 'Hoog', medium: 'Gemiddeld', low: 'Laag' };
+const PRIORITY_FROM_NL = { hoog: 'high', gemiddeld: 'medium', laag: 'low' };
+const STATUS_TO_NL = { open: 'Open', pending: 'In behandeling', resolved: 'Opgelost' };
+const STATUS_FROM_NL = { open: 'open', 'in behandeling': 'pending', opgelost: 'resolved' };
+
+/* ============================== ICONS ============================== */
 const ICONS = {
   plus: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
   search: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
@@ -168,36 +204,7 @@ const PRIORITY_META = {
   low: { label: 'Laag', color: 'var(--low)', bg: 'var(--low-dim)' },
 };
 
-function seedTickets(){
-  const now = Date.now();
-  const h = (n) => new Date(now - n*3600000).toISOString();
-  return [
-    { id:'TKT-2026-0847', subject:'HL-55 unit flikkert na transport', customer:'Mireille Dubois', company:'RetailVision BV', email:'m.dubois@retailvision.nl', brand:'NOVOSONIC', model:'HL-55', productType:'Holografisch display', priority:'high', status:'open', category:'Hardware', created:h(2), updated:h(1), messages:[
-      {from:'customer', author:'Mireille Dubois', text:'Na levering flikkert het beeld van de HL-55 zodra we hem aanzetten. Kabel zit goed vast. Kunnen jullie meekijken voor onze opening morgen?', time:h(2)},
-    ]},
-    { id:'TKT-2026-0846', subject:'Content-sync loopt uit de pas tussen twee units', customer:'Tom Verhoeven', company:'Studio Noord', email:'tom@studionoord.nl', brand:'NOVOSONIC', model:'HL-40', productType:'Holografisch display', priority:'medium', status:'pending', category:'Firmware', created:h(20), updated:h(3), messages:[
-      {from:'customer', author:'Tom Verhoeven', text:'Twee HL-40 schermen naast elkaar lopen na een paar uur uit sync. Firmware is bijgewerkt naar de laatste versie.', time:h(20)},
-      {from:'agent', author:'Support', text:'Bedankt voor het melden. Kun je het serienummer van beide units doorgeven, dan checken we de sync-clock instellingen.', time:h(18)},
-      {from:'customer', author:'Tom Verhoeven', text:'Serienummers: HL40-22913 en HL40-22914.', time:h(3)},
-    ]},
-    { id:'TKT-2026-0845', subject:'Vervangende bezel nodig, transportschade', customer:'Priya Patel', company:'EventCraft', email:'priya@eventcraft.eu', brand:'NOVOSONIC', model:'HL-32', productType:'Onderdeel / accessoire', priority:'low', status:'open', category:'Onderdelen', created:h(28), updated:h(27), messages:[
-      {from:'customer', author:'Priya Patel', text:'De bezel van onze HL-32 is beschadigd tijdens transport. Beeld werkt prima, alleen cosmetisch defect. Kunnen we een vervangonderdeel bestellen?', time:h(28)},
-    ]},
-    { id:'TKT-2026-0841', subject:'Kalibratie klopt niet na firmware-update v3.2', customer:'Jasper de Wit', company:'AV Solutions NL', email:'jasper@avsolutions.nl', brand:'NOVOSONIC', model:'HL-40 / HL-55', productType:'Holografisch display', priority:'high', status:'pending', category:'Firmware', created:h(50), updated:h(6), messages:[
-      {from:'customer', author:'Jasper de Wit', text:'Sinds de update naar v3.2 is de kleurkalibratie van drie units verschoven. Klant merkt het direct op.', time:h(50)},
-      {from:'agent', author:'Support', text:'We hebben dit ook bij een andere klant gezien. Er komt een patch v3.2.1 deze week. Tijdelijk kun je de fabriekskalibratie herstellen via het servicemenu.', time:h(6)},
-    ]},
-    { id:'TKT-2026-0839', subject:'Factuur klopt niet met offerte', customer:'Linda Bosman', company:'Bosman Retail Groep', email:'linda@bosmanretail.nl', brand:'NOVOSONIC', model:'HL-40', productType:'Holografisch display', priority:'medium', status:'resolved', category:'Facturatie', created:h(96), updated:h(72), messages:[
-      {from:'customer', author:'Linda Bosman', text:'De factuur voor de 4 HL-40 units wijkt af van de offerte, we zien geen staffelkorting terug.', time:h(96)},
-      {from:'agent', author:'Support', text:'Onze excuses, dit was een fout bij het opstellen van de factuur. Gecorrigeerde versie is verstuurd.', time:h(72)},
-    ]},
-    { id:'TKT-2026-0833', subject:'Levertijd HL-70 voor beursstand', customer:'Sven Aarts', company:'ExpoWorks', email:'sven@expoworks.be', brand:'NOVOSONIC', model:'HL-70', productType:'Holografisch display', priority:'low', status:'resolved', category:'Logistiek', created:h(140), updated:h(110), messages:[
-      {from:'customer', author:'Sven Aarts', text:'Wat is de huidige levertijd voor een HL-70 richting België? We hebben een beurs over drie weken.', time:h(140)},
-      {from:'agent', author:'Support', text:'Voorraad is beschikbaar, levering binnen 5 werkdagen mogelijk. We plannen de zending in.', time:h(110)},
-    ]},
-  ];
-}
-
+/* ============================== APP STATE ============================== */
 let state = {
   tickets: [],
   view: 'dashboard',
@@ -208,68 +215,259 @@ let state = {
   priorityMenuOpen: false,
 };
 
-function loadTickets(){
-  try{
-    const raw = localStorage.getItem('novosonic_tickets');
-    if(raw){ return JSON.parse(raw); }
-  }catch(e){ console.error('Kon opgeslagen tickets niet laden', e); }
-  const seeded = seedTickets();
-  saveTickets(seeded);
-  return seeded;
-}
-function saveTickets(tickets){
-  try{ localStorage.setItem('novosonic_tickets', JSON.stringify(tickets)); }
-  catch(e){ console.error('Opslaan mislukt', e); }
+let appState = 'checking'; // checking | signedout | loading | ready | error
+let errorMessage = '';
+let bannerError = '';
+
+let msalInstance = null;
+let account = null;
+let siteId = null;
+let ticketsListId = null;
+let messagesListId = null;
+
+/* ============================== AUTH + GRAPH ============================== */
+async function initAuth() {
+  msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
+  await msalInstance.initialize();
+  try {
+    await msalInstance.handleRedirectPromise();
+  } catch (e) { /* ignore */ }
+  const accounts = msalInstance.getAllAccounts();
+  if (accounts.length > 0) {
+    account = accounts[0];
+    await bootApp();
+  } else {
+    appState = 'signedout';
+    render();
+  }
 }
 
-state.tickets = loadTickets();
-state.selectedId = state.tickets[0] ? state.tickets[0].id : null;
-
-function timeAgo(iso){
-  const diff = Date.now() - new Date(iso).getTime();
-  const hh = Math.floor(diff/3600000);
-  if(hh < 1) return 'zojuist';
-  if(hh < 24) return hh + 'u geleden';
-  return Math.floor(hh/24) + 'd geleden';
-}
-function esc(str){
-  const d = document.createElement('div'); d.textContent = str; return d.innerHTML;
-}
-function dotHtml(color, pulse){
-  return `<span class="dot"><span class="dot-ping ${pulse?'pulse':''}" style="background:${color}"></span><span class="dot-core" style="background:${color}"></span></span>`;
+async function signIn() {
+  try {
+    const result = await msalInstance.loginPopup({ scopes: GRAPH_SCOPES });
+    account = result.account;
+    await bootApp();
+  } catch (e) {
+    appState = 'error';
+    errorMessage = 'Inloggen mislukt: ' + e.message;
+    render();
+  }
 }
 
-function setView(v){ state.view = v; render(); }
-function setStatusFilter(key){ state.statusFilter = key; state.view = 'tickets'; render(); }
-function openTicketFromDashboard(id){ state.view = 'tickets'; state.statusFilter = 'all'; state.selectedId = id; render(); }
-function setSearch(v){ state.search = v; render(); }
-function selectTicket(id){ state.selectedId = id; state.priorityMenuOpen = false; render(); }
-function updateStatus(id, status){
-  state.tickets = state.tickets.map(t => t.id === id ? {...t, status, updated: new Date().toISOString()} : t);
-  saveTickets(state.tickets); render();
+function signOut() {
+  msalInstance.logoutRedirect({ account });
 }
-function togglePriorityMenu(){ state.priorityMenuOpen = !state.priorityMenuOpen; render(); }
-function updatePriority(id, priority){
-  state.tickets = state.tickets.map(t => t.id === id ? {...t, priority} : t);
-  state.priorityMenuOpen = false;
-  saveTickets(state.tickets); render();
+
+async function getToken() {
+  const request = { scopes: GRAPH_SCOPES, account };
+  try {
+    const result = await msalInstance.acquireTokenSilent(request);
+    return result.accessToken;
+  } catch (e) {
+    const result = await msalInstance.acquireTokenPopup(request);
+    return result.accessToken;
+  }
 }
-function sendReply(){
-  const input = document.getElementById('replyInput');
-  const text = input.value.trim();
-  if(!text || !state.selectedId) return;
-  state.tickets = state.tickets.map(t => t.id === state.selectedId ? {
-    ...t,
-    status: t.status === 'open' ? 'pending' : t.status,
-    updated: new Date().toISOString(),
-    messages: [...t.messages, {from:'agent', author:'Support', text, time:new Date().toISOString()}]
-  } : t);
-  saveTickets(state.tickets);
+
+async function graphFetch(path, options = {}) {
+  const token = await getToken();
+  const res = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    let detail = '';
+    try { detail = (await res.json()).error?.message || ''; } catch (e) {}
+    throw new Error(`Graph API fout (${res.status}) op ${path}. ${detail}`);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+async function resolveSiteAndLists() {
+  const site = await graphFetch(`/sites/${SITE_HOSTNAME}:${SITE_PATH}`);
+  siteId = site.id;
+  const lists = await graphFetch(`/sites/${siteId}/lists?$select=id,displayName`);
+  const ticketsList = lists.value.find(l => l.displayName === TICKETS_LIST_NAME);
+  const messagesList = lists.value.find(l => l.displayName === MESSAGES_LIST_NAME);
+  if (!ticketsList || !messagesList) {
+    throw new Error(`Kon de lijst "${TICKETS_LIST_NAME}" en/of "${MESSAGES_LIST_NAME}" niet vinden op de SharePoint-site. Check de exacte naam van de lijsten.`);
+  }
+  ticketsListId = ticketsList.id;
+  messagesListId = messagesList.id;
+}
+
+async function fetchTicketsFromGraph() {
+  const data = await graphFetch(`/sites/${siteId}/lists/${ticketsListId}/items?$expand=fields&$top=500`);
+  return data.value.map(item => ({
+    spId: item.id,
+    id: `TKT-${String(item.id).padStart(4, '0')}`,
+    subject: item.fields.Title || '(geen onderwerp)',
+    customer: item.fields.Klant || '',
+    company: item.fields.Bedrijf || '',
+    email: item.fields.Email || '',
+    brand: item.fields.Merk || '',
+    model: item.fields.Typenummer || '',
+    productType: item.fields.SoortProduct || '',
+    category: item.fields.Categorie || '',
+    priority: PRIORITY_FROM_NL[(item.fields.Prioriteit || '').toLowerCase()] || 'medium',
+    status: STATUS_FROM_NL[(item.fields.Status || '').toLowerCase()] || 'open',
+    created: item.createdDateTime,
+    updated: item.lastModifiedDateTime,
+    messages: [],
+  }));
+}
+
+async function fetchMessagesFromGraph() {
+  const data = await graphFetch(`/sites/${siteId}/lists/${messagesListId}/items?$expand=fields&$top=2000`);
+  return data.value.map(item => ({
+    ticketSpId: item.fields.TicketId,
+    from: (item.fields.Van || '').toLowerCase() === 'agent' ? 'agent' : 'customer',
+    author: item.fields.Auteur || '',
+    text: item.fields.Tekst || '',
+    time: item.createdDateTime,
+  }));
+}
+
+async function refreshAllData() {
+  const [tickets, messages] = await Promise.all([fetchTicketsFromGraph(), fetchMessagesFromGraph()]);
+  tickets.forEach(t => {
+    t.messages = messages
+      .filter(m => String(m.ticketSpId) === String(t.spId))
+      .sort((a, b) => new Date(a.time) - new Date(b.time));
+  });
+  tickets.sort((a, b) => new Date(b.updated) - new Date(a.updated));
+  state.tickets = tickets;
+  if (!state.tickets.find(t => t.id === state.selectedId)) {
+    state.selectedId = tickets[0] ? tickets[0].id : null;
+  }
+}
+
+async function bootApp() {
+  appState = 'loading';
+  render();
+  try {
+    await resolveSiteAndLists();
+    await refreshAllData();
+    appState = 'ready';
+  } catch (e) {
+    appState = 'error';
+    errorMessage = e.message;
+  }
   render();
 }
-function openNewTicket(){ state.showNewTicket = true; render(); }
-function closeNewTicket(){ state.showNewTicket = false; render(); }
-function createTicket(){
+
+async function retryBoot() {
+  appState = 'checking';
+  render();
+  await bootApp();
+}
+
+function showBannerError(e) {
+  bannerError = e.message || String(e);
+  render();
+}
+function dismissBanner() { bannerError = ''; render(); }
+
+/* ============================== GRAPH WRITE HELPERS ============================== */
+async function createTicketInGraph(form) {
+  const created = await graphFetch(`/sites/${siteId}/lists/${ticketsListId}/items`, {
+    method: 'POST',
+    body: JSON.stringify({ fields: {
+      Title: form.subject, Klant: form.customer, Bedrijf: form.company, Email: form.email,
+      Merk: form.brand, Typenummer: form.model, SoortProduct: form.productType,
+      Categorie: form.category, Prioriteit: PRIORITY_TO_NL[form.priority], Status: 'Open',
+    }}),
+  });
+  await graphFetch(`/sites/${siteId}/lists/${messagesListId}/items`, {
+    method: 'POST',
+    body: JSON.stringify({ fields: { TicketId: String(created.id), Van: 'klant', Auteur: form.customer, Tekst: form.message }}),
+  });
+  return created.id;
+}
+
+async function updateTicketFieldsInGraph(spId, fields) {
+  await graphFetch(`/sites/${siteId}/lists/${ticketsListId}/items/${spId}/fields`, {
+    method: 'PATCH',
+    body: JSON.stringify(fields),
+  });
+}
+
+async function addMessageInGraph(spId, author, text) {
+  await graphFetch(`/sites/${siteId}/lists/${messagesListId}/items`, {
+    method: 'POST',
+    body: JSON.stringify({ fields: { TicketId: String(spId), Van: 'agent', Auteur: author, Tekst: text }}),
+  });
+}
+
+/* ============================== HELPERS ============================== */
+function timeAgo(iso) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const hh = Math.floor(diff / 3600000);
+  if (hh < 1) return 'zojuist';
+  if (hh < 24) return hh + 'u geleden';
+  return Math.floor(hh / 24) + 'd geleden';
+}
+function esc(str) {
+  const d = document.createElement('div'); d.textContent = str == null ? '' : str; return d.innerHTML;
+}
+function dotHtml(color, pulse) {
+  return `<span class="dot"><span class="dot-ping ${pulse ? 'pulse' : ''}" style="background:${color}"></span><span class="dot-core" style="background:${color}"></span></span>`;
+}
+
+/* ============================== ACTIONS ============================== */
+function setView(v) { state.view = v; render(); }
+function setStatusFilter(key) { state.statusFilter = key; state.view = 'tickets'; render(); }
+function openTicketFromDashboard(id) { state.view = 'tickets'; state.statusFilter = 'all'; state.selectedId = id; render(); }
+function setSearch(v) { state.search = v; render(); }
+function selectTicket(id) { state.selectedId = id; state.priorityMenuOpen = false; render(); }
+
+async function updateStatus(id, status) {
+  const t = state.tickets.find(x => x.id === id); if (!t) return;
+  try {
+    await updateTicketFieldsInGraph(t.spId, { Status: STATUS_TO_NL[status] });
+    t.status = status; t.updated = new Date().toISOString();
+    render();
+  } catch (e) { showBannerError(e); }
+}
+
+function togglePriorityMenu() { state.priorityMenuOpen = !state.priorityMenuOpen; render(); }
+async function updatePriority(id, priority) {
+  const t = state.tickets.find(x => x.id === id); if (!t) return;
+  try {
+    await updateTicketFieldsInGraph(t.spId, { Prioriteit: PRIORITY_TO_NL[priority] });
+    t.priority = priority; state.priorityMenuOpen = false;
+    render();
+  } catch (e) { showBannerError(e); }
+}
+
+async function sendReply() {
+  const input = document.getElementById('replyInput');
+  const text = input.value.trim();
+  if (!text || !state.selectedId) return;
+  const t = state.tickets.find(x => x.id === state.selectedId); if (!t) return;
+  const wasOpen = t.status === 'open';
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+  try {
+    await addMessageInGraph(t.spId, account && account.name ? account.name : 'Support', text);
+    if (wasOpen) await updateTicketFieldsInGraph(t.spId, { Status: STATUS_TO_NL['pending'] });
+    t.messages.push({ from: 'agent', author: (account && account.name) || 'Support', text, time: new Date().toISOString() });
+    if (wasOpen) t.status = 'pending';
+    t.updated = new Date().toISOString();
+    input.value = '';
+    render();
+  } catch (e) { showBannerError(e); btn.disabled = false; }
+}
+
+function openNewTicket() { state.showNewTicket = true; render(); }
+function closeNewTicket() { state.showNewTicket = false; render(); }
+
+async function createTicket() {
   const subject = document.getElementById('ntSubject').value.trim();
   const customer = document.getElementById('ntCustomer').value.trim();
   const company = document.getElementById('ntCompany').value.trim();
@@ -280,38 +478,71 @@ function createTicket(){
   const category = document.getElementById('ntCategory').value;
   const priority = document.getElementById('ntPriority').value;
   const message = document.getElementById('ntMessage').value.trim();
-  if(!subject || !customer || !company || !message) return;
+  if (!subject || !customer || !company || !message) return;
 
-  const num = 848 + state.tickets.filter(t => t.id.startsWith('TKT-2026')).length;
-  const id = 'TKT-2026-' + String(num).padStart(4,'0');
-  const nowIso = new Date().toISOString();
-  const ticket = { id, subject, customer, company, email, brand, model, productType, priority, status:'open', category, created:nowIso, updated:nowIso,
-    messages:[{from:'customer', author:customer, text:message, time:nowIso}] };
-  state.tickets = [ticket, ...state.tickets];
-  saveTickets(state.tickets);
-  state.selectedId = id;
-  state.showNewTicket = false;
-  render();
+  const btn = document.getElementById('ntCreateBtn');
+  btn.disabled = true; btn.textContent = 'Bezig met aanmaken...';
+  try {
+    const newSpId = await createTicketInGraph({ subject, customer, company, email, brand, model, productType, category, priority, message });
+    await refreshAllData();
+    state.selectedId = `TKT-${String(newSpId).padStart(4, '0')}`;
+    state.view = 'tickets';
+    state.statusFilter = 'all';
+    state.showNewTicket = false;
+    render();
+  } catch (e) {
+    showBannerError(e);
+    btn.disabled = false; btn.textContent = 'Ticket aanmaken';
+  }
 }
 
-function render(){
-  const counts = state.tickets.reduce((acc,t)=>{ acc[t.status]=(acc[t.status]||0)+1; return acc; }, {open:0,pending:0,resolved:0});
+/* ============================== RENDER ============================== */
+function render() {
+  const appEl = document.getElementById('app');
+
+  if (appState === 'checking' || appState === 'loading') {
+    appEl.innerHTML = `<div class="center-screen"><div class="spinner"></div><div style="color:var(--text2);font-size:13.5px;">${appState === 'checking' ? 'Bezig met controleren van inlogstatus…' : 'Tickets ophalen uit SharePoint…'}</div></div>`;
+    return;
+  }
+  if (appState === 'signedout') {
+    appEl.innerHTML = `
+      <div class="center-screen">
+        <div class="brand-mark" style="width:44px;height:44px;font-size:18px;">N</div>
+        <div class="display" style="font-size:20px;font-weight:600;">NOVOSONIC Support Desk</div>
+        <div style="color:var(--text2);font-size:13.5px;max-width:340px;">Log in met je Microsoft-account van LMS Distribution om de tickets te bekijken en te beheren.</div>
+        <button class="login-btn" onclick="signIn()">Inloggen met Microsoft</button>
+      </div>`;
+    return;
+  }
+  if (appState === 'error') {
+    appEl.innerHTML = `
+      <div class="center-screen">
+        <div class="error-box"><b>Er ging iets mis</b><br/>${esc(errorMessage)}</div>
+        <button class="retry-btn" onclick="retryBoot()">Opnieuw proberen</button>
+      </div>`;
+    return;
+  }
+
+  /* appState === 'ready' */
+  const counts = state.tickets.reduce((acc, t) => { acc[t.status] = (acc[t.status] || 0) + 1; return acc; }, { open: 0, pending: 0, resolved: 0 });
   const filtered = state.tickets
     .filter(t => state.statusFilter === 'all' || t.status === state.statusFilter)
     .filter(t => {
       const q = state.search.toLowerCase();
-      if(!q) return true;
+      if (!q) return true;
       return t.subject.toLowerCase().includes(q) || t.company.toLowerCase().includes(q) || t.id.toLowerCase().includes(q);
     })
-    .sort((a,b)=> new Date(b.updated) - new Date(a.updated));
+    .sort((a, b) => new Date(b.updated) - new Date(a.updated));
   const selected = state.tickets.find(t => t.id === state.selectedId);
 
   const navItems = [
-    {key:'all', label:'Alle tickets', count: state.tickets.length},
-    {key:'open', label:'Open', count: counts.open, dot: 'var(--accent)'},
-    {key:'pending', label:'In behandeling', count: counts.pending, dot: 'var(--medium)'},
-    {key:'resolved', label:'Opgelost', count: counts.resolved, dot: 'var(--text3)'},
+    { key: 'all', label: 'Alle tickets', count: state.tickets.length },
+    { key: 'open', label: 'Open', count: counts.open, dot: 'var(--accent)' },
+    { key: 'pending', label: 'In behandeling', count: counts.pending, dot: 'var(--medium)' },
+    { key: 'resolved', label: 'Opgelost', count: counts.resolved, dot: 'var(--text3)' },
   ];
+
+  const userName = (account && account.name) || 'Onbekend';
 
   const railHtml = `
     <div class="rail">
@@ -324,19 +555,21 @@ function render(){
       </div>
       <button class="new-ticket-btn" onclick="openNewTicket()">${ICONS.plus} Nieuw ticket</button>
       <div class="nav">
-        <button class="nav-item ${state.view==='dashboard'?'active':''}" onclick="setView('dashboard')">
+        <button class="nav-item ${state.view === 'dashboard' ? 'active' : ''}" onclick="setView('dashboard')">
           <span class="nav-item-label">${ICONS.grid} Dashboard</span>
         </button>
       </div>
       <div class="nav" style="margin-top:10px;">
         ${navItems.map(item => `
-          <button class="nav-item ${state.view==='tickets' && state.statusFilter===item.key?'active':''}" onclick="setStatusFilter('${item.key}')">
-            <span class="nav-item-label">${item.dot ? dotHtml(item.dot,false) : ''} ${item.label}</span>
+          <button class="nav-item ${state.view === 'tickets' && state.statusFilter === item.key ? 'active' : ''}" onclick="setStatusFilter('${item.key}')">
+            <span class="nav-item-label">${item.dot ? dotHtml(item.dot, false) : ''} ${item.label}</span>
             <span class="nav-item-count mono">${item.count}</span>
           </button>`).join('')}
       </div>
       <div class="rail-footer">
-        <div class="avatar">ST</div> Stef · LMS Distribution
+        <div class="avatar">${esc(userName.slice(0,2).toUpperCase())}</div>
+        <span class="rail-footer-name">${esc(userName)}</span>
+        <button class="signout-link" onclick="signOut()">Uitloggen</button>
       </div>
     </div>
   `;
@@ -353,9 +586,9 @@ function render(){
         ${filtered.length === 0 ? '<div class="empty-note">Geen tickets gevonden.</div>' : filtered.map(t => {
           const p = PRIORITY_META[t.priority]; const s = STATUS_META[t.status];
           return `
-            <button class="ticket-row ${t.id===state.selectedId?'selected':''}" onclick="selectTicket('${t.id}')">
+            <button class="ticket-row ${t.id === state.selectedId ? 'selected' : ''}" onclick="selectTicket('${t.id}')">
               <div class="ticket-row-top">
-                <span class="ticket-id mono">${dotHtml(s.color, t.status==='open')} ${t.id}</span>
+                <span class="ticket-id mono">${dotHtml(s.color, t.status === 'open')} ${t.id}</span>
                 <span class="ticket-time mono">${timeAgo(t.updated)}</span>
               </div>
               <div class="ticket-subject">${esc(t.subject)}</div>
@@ -370,7 +603,7 @@ function render(){
   `;
 
   let detailHtml;
-  if(!selected){
+  if (!selected) {
     detailHtml = `<div class="detail-col"><div class="detail-empty">Selecteer een ticket</div></div>`;
   } else {
     const p = PRIORITY_META[selected.priority];
@@ -384,9 +617,9 @@ function render(){
               <div class="detail-subject display">${esc(selected.subject)}</div>
             </div>
             <div class="status-buttons">
-              ${Object.entries(STATUS_META).map(([key,meta]) => `
-                <button class="status-btn ${selected.status===key?'active':''}" style="color:${selected.status===key?meta.color:'var(--text3)'}" onclick="updateStatus('${selected.id}','${key}')">
-                  ${dotHtml(meta.color,false)} ${meta.label}
+              ${Object.entries(STATUS_META).map(([key, meta]) => `
+                <button class="status-btn ${selected.status === key ? 'active' : ''}" style="color:${selected.status === key ? meta.color : 'var(--text3)'}" onclick="updateStatus('${selected.id}','${key}')">
+                  ${dotHtml(meta.color, false)} ${meta.label}
                 </button>`).join('')}
             </div>
           </div>
@@ -399,10 +632,10 @@ function render(){
             <div class="meta-item">${ICONS.calendar} Geopend ${timeAgo(selected.created)}</div>
             <div class="priority-wrap">
               <button class="priority-btn" style="color:${p.color};background:${p.bg}" onclick="togglePriorityMenu()">
-                ${selected.priority==='high'?ICONS.alert:''} Prioriteit: ${p.label} ${ICONS.chevron}
+                ${selected.priority === 'high' ? ICONS.alert : ''} Prioriteit: ${p.label} ${ICONS.chevron}
               </button>
-              <div class="priority-menu ${state.priorityMenuOpen?'open':''}">
-                ${Object.entries(PRIORITY_META).map(([key,meta]) => `<button style="color:${meta.color}" onclick="updatePriority('${selected.id}','${key}')">${meta.label}</button>`).join('')}
+              <div class="priority-menu ${state.priorityMenuOpen ? 'open' : ''}">
+                ${Object.entries(PRIORITY_META).map(([key, meta]) => `<button style="color:${meta.color}" onclick="updatePriority('${selected.id}','${key}')">${meta.label}</button>`).join('')}
               </div>
             </div>
           </div>
@@ -411,7 +644,7 @@ function render(){
           ${selected.messages.map(m => `
             <div class="msg ${m.from}">
               <div class="msg-meta">
-                <span class="msg-author" style="color:${m.from==='agent'?'var(--accent)':'var(--text)'}">${esc(m.author)}</span>
+                <span class="msg-author" style="color:${m.from === 'agent' ? 'var(--accent)' : 'var(--text)'}">${esc(m.author)}</span>
                 <span class="msg-time mono">${timeAgo(m.time)}</span>
               </div>
               <div class="msg-bubble">${esc(m.text)}</div>
@@ -426,7 +659,7 @@ function render(){
   }
 
   const modalHtml = `
-    <div class="modal-overlay ${state.showNewTicket?'open':''}">
+    <div class="modal-overlay ${state.showNewTicket ? 'open' : ''}">
       <div class="modal">
         <div class="modal-header">
           <div class="modal-title display">Nieuw ticket aanmaken</div>
@@ -445,13 +678,13 @@ function render(){
           </div>
           <div class="field"><label>Soort product</label>
             <select id="ntProductType">
-              ${['Holografisch display','LED videowall','Transparant scherm','Holografische vitrine','Non touch scherm','Touch scherm','Computer','Totem','Onderdeel / accessoire','Overig'].map(c=>`<option>${c}</option>`).join('')}
+              ${['Holografisch display','LED videowall','Transparant scherm','Holografische vitrine','Non touch scherm','Touch scherm','Computer','Totem','Onderdeel / accessoire','Overig'].map(c => `<option>${c}</option>`).join('')}
             </select>
           </div>
           <div class="form-row">
             <div class="field"><label>Categorie</label>
               <select id="ntCategory">
-                ${['Hardware','Firmware','Onderdelen','Logistiek','Facturatie','Overig'].map(c=>`<option>${c}</option>`).join('')}
+                ${['Hardware','Firmware','Onderdelen','Logistiek','Facturatie','Overig'].map(c => `<option>${c}</option>`).join('')}
               </select>
             </div>
             <div class="field"><label>Prioriteit</label>
@@ -472,14 +705,19 @@ function render(){
     </div>
   `;
 
+  const bannerHtml = bannerError ? `
+    <div class="top-banner">
+      <span>${esc(bannerError)}</span>
+      <button onclick="dismissBanner()">Sluiten</button>
+    </div>` : '';
+
   const priorityRank = { high: 0, medium: 1, low: 2 };
   const byStatus = (key) => state.tickets
     .filter(t => t.status === key)
-    .sort((a,b) => (priorityRank[a.priority]-priorityRank[b.priority]) || (new Date(b.updated)-new Date(a.updated)));
-
+    .sort((a, b) => (priorityRank[a.priority] - priorityRank[b.priority]) || (new Date(b.updated) - new Date(a.updated)));
   const highOpenCount = state.tickets.filter(t => t.status !== 'resolved' && t.priority === 'high').length;
 
-  function kanbanCard(t){
+  function kanbanCard(t) {
     const p = PRIORITY_META[t.priority];
     return `
       <button class="kanban-card" onclick="openTicketFromDashboard('${t.id}')">
@@ -494,14 +732,13 @@ function render(){
         </div>
       </button>`;
   }
-
-  function kanbanColumn(key){
+  function kanbanColumn(key) {
     const meta = STATUS_META[key];
     const items = byStatus(key);
     return `
       <div class="kanban-col">
         <div class="kanban-col-header">
-          <span class="kanban-col-title">${dotHtml(meta.color,false)} ${meta.label}</span>
+          <span class="kanban-col-title">${dotHtml(meta.color, false)} ${meta.label}</span>
           <span class="kanban-col-count mono">${items.length}</span>
         </div>
         <div class="kanban-cards">
@@ -515,9 +752,9 @@ function render(){
       <div class="dashboard-title display">Overzicht</div>
       <div class="dashboard-sub">Status van alle tickets in één oogopslag</div>
       <div class="stats-row">
-        <div class="stat-card"><div class="stat-value" style="color:var(--accent)">${counts.open}</div><div class="stat-label">${dotHtml('var(--accent)',false)} Open</div></div>
-        <div class="stat-card"><div class="stat-value" style="color:var(--medium)">${counts.pending}</div><div class="stat-label">${dotHtml('var(--medium)',false)} In behandeling</div></div>
-        <div class="stat-card"><div class="stat-value" style="color:var(--text3)">${counts.resolved}</div><div class="stat-label">${dotHtml('var(--text3)',false)} Opgelost</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:var(--accent)">${counts.open}</div><div class="stat-label">${dotHtml('var(--accent)', false)} Open</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:var(--medium)">${counts.pending}</div><div class="stat-label">${dotHtml('var(--medium)', false)} In behandeling</div></div>
+        <div class="stat-card"><div class="stat-value" style="color:var(--text3)">${counts.resolved}</div><div class="stat-label">${dotHtml('var(--text3)', false)} Opgelost</div></div>
         <div class="stat-card"><div class="stat-value" style="color:var(--high)">${highOpenCount}</div><div class="stat-label">${ICONS.alert} Hoge prioriteit, nog niet opgelost</div></div>
       </div>
       <div class="kanban">
@@ -528,35 +765,36 @@ function render(){
     </div>
   `;
 
-  if(state.view === 'dashboard'){
-    document.getElementById('app').innerHTML = railHtml + dashboardHtml + modalHtml;
+  if (state.view === 'dashboard') {
+    appEl.innerHTML = bannerHtml + railHtml + dashboardHtml + modalHtml;
     return;
   }
 
-  document.getElementById('app').innerHTML = railHtml + listHtml + detailHtml + modalHtml;
-
+  appEl.innerHTML = bannerHtml + railHtml + listHtml + detailHtml + modalHtml;
   const scrollEl = document.getElementById('messagesScroll');
-  if(scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
+  if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
 }
 
-function onReplyInput(){
+function onReplyInput() {
   const input = document.getElementById('replyInput');
   const btn = document.getElementById('sendBtn');
-  if(input.value.trim()) btn.classList.add('ready'); else btn.classList.remove('ready');
+  if (input.value.trim()) btn.classList.add('ready'); else btn.classList.remove('ready');
 }
-function onReplyKeydown(e){
-  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendReply(); }
+function onReplyKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply(); }
 }
-function onModalInput(){
+function onModalInput() {
   const subject = document.getElementById('ntSubject').value.trim();
   const customer = document.getElementById('ntCustomer').value.trim();
   const company = document.getElementById('ntCompany').value.trim();
   const message = document.getElementById('ntMessage').value.trim();
   const btn = document.getElementById('ntCreateBtn');
-  if(subject && customer && company && message) btn.classList.add('ready'); else btn.classList.remove('ready');
+  if (subject && customer && company && message) btn.classList.add('ready'); else btn.classList.remove('ready');
 }
 
+/* ============================== BOOT ============================== */
 render();
+initAuth();
 </script>
 </body>
 </html>
