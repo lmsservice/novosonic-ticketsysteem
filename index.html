@@ -227,17 +227,26 @@ let messagesListId = null;
 
 /* ============================== AUTH + GRAPH ============================== */
 async function initAuth() {
-  msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
-  await msalInstance.initialize();
   try {
-    await msalInstance.handleRedirectPromise();
-  } catch (e) { /* ignore */ }
-  const accounts = msalInstance.getAllAccounts();
-  if (accounts.length > 0) {
-    account = accounts[0];
-    await bootApp();
-  } else {
-    appState = 'signedout';
+    if (typeof msal === 'undefined') {
+      throw new Error('De MSAL-inlogbibliotheek kon niet laden (waarschijnlijk geblokkeerd door een ad-blocker, extensie, of netwerkfilter). Probeer een andere browser/netwerk, of schakel blokkers voor deze pagina uit.');
+    }
+    msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
+    await msalInstance.initialize();
+    try {
+      await msalInstance.handleRedirectPromise();
+    } catch (e) { /* ignore */ }
+    const accounts = msalInstance.getAllAccounts();
+    if (accounts.length > 0) {
+      account = accounts[0];
+      await bootApp();
+    } else {
+      appState = 'signedout';
+      render();
+    }
+  } catch (e) {
+    appState = 'error';
+    errorMessage = 'Kon de inlogmodule niet starten: ' + e.message;
     render();
   }
 }
