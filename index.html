@@ -91,6 +91,11 @@
   .status-btn.active{background:var(--surface-hover);border:1px solid var(--border-light);}
   .meta-row{display:flex;gap:20px;margin-top:14px;flex-wrap:wrap;align-items:center;}
   .meta-item{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text2);}
+  .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 24px;margin-top:16px;padding:16px 18px;background:var(--surface);border:1px solid var(--border);border-radius:10px;}
+  .info-field{display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .info-label{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:600;}
+  .info-value{font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .info-value.empty{color:var(--text3);font-style:italic;}
   .priority-wrap{position:relative;}
   .priority-btn{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:3px 8px;border-radius:5px;border:none;}
   .priority-menu{position:absolute;top:100%;margin-top:4px;background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;z-index:10;min-width:120px;display:none;}
@@ -321,6 +326,7 @@ async function fetchTicketsFromGraph() {
     email: item.fields.Email || '',
     brand: item.fields.Merk || '',
     model: item.fields.Typenummer || '',
+    serialNumber: item.fields.Serienummer || '',
     productType: item.fields.SoortProduct || '',
     category: item.fields.Categorie || '',
     priority: PRIORITY_FROM_NL[(item.fields.Prioriteit || '').toLowerCase()] || 'medium',
@@ -388,7 +394,7 @@ async function createTicketInGraph(form) {
     method: 'POST',
     body: JSON.stringify({ fields: {
       Title: form.subject, Klant: form.customer, Bedrijf: form.company, Email: form.email,
-      Merk: form.brand, Typenummer: form.model, SoortProduct: form.productType,
+      Merk: form.brand, Typenummer: form.model, Serienummer: form.serialNumber, SoortProduct: form.productType,
       Categorie: form.category, Prioriteit: PRIORITY_TO_NL[form.priority], Status: 'Open',
     }}),
   });
@@ -483,6 +489,7 @@ async function createTicket() {
   const email = document.getElementById('ntEmail').value.trim();
   const brand = document.getElementById('ntBrand').value.trim();
   const model = document.getElementById('ntModel').value.trim();
+  const serialNumber = document.getElementById('ntSerialNumber').value.trim();
   const productType = document.getElementById('ntProductType').value;
   const category = document.getElementById('ntCategory').value;
   const priority = document.getElementById('ntPriority').value;
@@ -492,7 +499,7 @@ async function createTicket() {
   const btn = document.getElementById('ntCreateBtn');
   btn.disabled = true; btn.textContent = 'Bezig met aanmaken...';
   try {
-    const newSpId = await createTicketInGraph({ subject, customer, company, email, brand, model, productType, category, priority, message });
+    const newSpId = await createTicketInGraph({ subject, customer, company, email, brand, model, serialNumber, productType, category, priority, message });
     await refreshAllData();
     state.selectedId = `TKT-${String(newSpId).padStart(4, '0')}`;
     state.view = 'tickets';
@@ -632,13 +639,18 @@ function render() {
                 </button>`).join('')}
             </div>
           </div>
+          <div class="info-grid">
+            <div class="info-field"><span class="info-label">Klant</span><span class="info-value ${!selected.customer ? 'empty' : ''}">${selected.customer ? esc(selected.customer) : '—'}</span></div>
+            <div class="info-field"><span class="info-label">Bedrijf</span><span class="info-value ${!selected.company ? 'empty' : ''}">${selected.company ? esc(selected.company) : '—'}</span></div>
+            <div class="info-field"><span class="info-label">E-mail</span><span class="info-value ${!selected.email ? 'empty' : ''}">${selected.email ? esc(selected.email) : '—'}</span></div>
+            <div class="info-field"><span class="info-label">Merk</span><span class="info-value ${!selected.brand ? 'empty' : ''}">${selected.brand ? esc(selected.brand) : '—'}</span></div>
+            <div class="info-field"><span class="info-label">Typenummer</span><span class="info-value ${!selected.model ? 'empty' : ''}">${selected.model ? esc(selected.model) : '—'}</span></div>
+            <div class="info-field"><span class="info-label">Serienummer</span><span class="info-value ${!selected.serialNumber ? 'empty' : ''}">${selected.serialNumber ? esc(selected.serialNumber) : '—'}</span></div>
+            <div class="info-field"><span class="info-label">Soort product</span><span class="info-value ${!selected.productType ? 'empty' : ''}">${selected.productType ? esc(selected.productType) : '—'}</span></div>
+            <div class="info-field"><span class="info-label">Categorie</span><span class="info-value ${!selected.category ? 'empty' : ''}">${selected.category ? esc(selected.category) : '—'}</span></div>
+            <div class="info-field"><span class="info-label">Geopend</span><span class="info-value">${timeAgo(selected.created)}</span></div>
+          </div>
           <div class="meta-row">
-            <div class="meta-item">${ICONS.building} ${esc(selected.company)}</div>
-            <div class="meta-item">${ICONS.mail} ${esc(selected.email)}</div>
-            <div class="meta-item">${ICONS.tag} ${esc(selected.category)}</div>
-            ${selected.brand ? `<div class="meta-item">${ICONS.tag} ${esc(selected.brand)}${selected.model ? ' ' + esc(selected.model) : ''}</div>` : ''}
-            ${selected.productType ? `<div class="meta-item">${ICONS.tag} ${esc(selected.productType)}</div>` : ''}
-            <div class="meta-item">${ICONS.calendar} Geopend ${timeAgo(selected.created)}</div>
             <div class="priority-wrap">
               <button class="priority-btn" style="color:${p.color};background:${p.bg}" onclick="togglePriorityMenu()">
                 ${selected.priority === 'high' ? ICONS.alert : ''} Prioriteit: ${p.label} ${ICONS.chevron}
@@ -650,6 +662,7 @@ function render() {
           </div>
         </div>
         <div class="messages" id="messagesScroll">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:600;padding-bottom:4px;">Communicatie</div>
           ${selected.messages.map(m => `
             <div class="msg ${m.from}">
               <div class="msg-meta">
@@ -684,6 +697,9 @@ function render() {
           <div class="form-row">
             <div class="field"><label>Merk</label><input id="ntBrand" placeholder="Bijv. NOVOSONIC" value="NOVOSONIC"/></div>
             <div class="field"><label>Typenummer</label><input id="ntModel" placeholder="Bijv. HL-55"/></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Serienummer</label><input id="ntSerialNumber" placeholder="Bijv. HL55-04821"/></div>
           </div>
           <div class="field"><label>Soort product</label>
             <select id="ntProductType">
