@@ -172,7 +172,7 @@ const MSAL_CONFIG = {
   },
   cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: false },
 };
-const GRAPH_SCOPES = ['User.Read', 'Sites.ReadWrite.All'];
+const GRAPH_SCOPES = ['User.Read', 'Sites.ReadWrite.All', 'Mail.Send'];
 const SITE_HOSTNAME = 'jsholding2.sharepoint.com';
 const SITE_PATH = '/sites/LMSDistribution';
 const TICKETS_LIST_NAME = 'Tickets';
@@ -388,6 +388,27 @@ function showBannerError(e) {
 }
 function dismissBanner() { bannerError = ''; render(); }
 
+const NOTIFICATION_RECIPIENTS = ['p.vanzwam@lmsdistribution.nl', 's.hoogeveen@lmsdistribution.nl'];
+
+async function sendNotificationMail(subject, bodyHtml) {
+  try {
+    await graphFetch('/me/sendMail', {
+      method: 'POST',
+      body: JSON.stringify({
+        message: {
+          subject,
+          body: { contentType: 'HTML', content: bodyHtml },
+          toRecipients: NOTIFICATION_RECIPIENTS.map(addr => ({ emailAddress: { address: addr } })),
+        },
+        saveToSentItems: true,
+      }),
+    });
+  } catch (e) {
+    console.error('Notificatiemail versturen mislukt:', e);
+    showBannerError(new Error('Ticket is opgeslagen, maar de notificatiemail kon niet worden verstuurd: ' + e.message));
+  }
+}
+
 /* ============================== GRAPH WRITE HELPERS ============================== */
 async function createTicketInGraph(form) {
   const created = await graphFetch(`/sites/${siteId}/lists/${ticketsListId}/items`, {
@@ -447,6 +468,10 @@ async function updateStatus(id, status) {
     await updateTicketFieldsInGraph(t.spId, { Status: STATUS_TO_NL[status] });
     t.status = status; t.updated = new Date().toISOString();
     render();
+    sendNotificationMail(
+      `Ticket gewijzigd: ${t.id}`,
+      `<p>De status van ticket <b>${t.id}</b> (${esc(t.subject)}) is gewijzigd naar <b>${STATUS_TO_NL[status]}</b>.</p><p><a href="${MSAL_CONFIG.auth.redirectUri}">Open het ticketsysteem</a></p>`
+    );
   } catch (e) { showBannerError(e); }
 }
 
@@ -457,6 +482,10 @@ async function updatePriority(id, priority) {
     await updateTicketFieldsInGraph(t.spId, { Prioriteit: PRIORITY_TO_NL[priority] });
     t.priority = priority; state.priorityMenuOpen = false;
     render();
+    sendNotificationMail(
+      `Ticket gewijzigd: ${t.id}`,
+      `<p>De prioriteit van ticket <b>${t.id}</b> (${esc(t.subject)}) is gewijzigd naar <b>${PRIORITY_TO_NL[priority]}</b>.</p><p><a href="${MSAL_CONFIG.auth.redirectUri}">Open het ticketsysteem</a></p>`
+    );
   } catch (e) { showBannerError(e); }
 }
 
@@ -476,6 +505,10 @@ async function sendReply() {
     t.updated = new Date().toISOString();
     input.value = '';
     render();
+    sendNotificationMail(
+      `Ticket gewijzigd: ${t.id}`,
+      `<p>Er is een nieuwe reactie toegevoegd aan ticket <b>${t.id}</b> (${esc(t.subject)}) door ${esc((account && account.name) || 'Support')}.</p><p><a href="${MSAL_CONFIG.auth.redirectUri}">Open het ticketsysteem</a></p>`
+    );
   } catch (e) { showBannerError(e); btn.disabled = false; }
 }
 
@@ -500,12 +533,17 @@ async function createTicket() {
   btn.disabled = true; btn.textContent = 'Bezig met aanmaken...';
   try {
     const newSpId = await createTicketInGraph({ subject, customer, company, email, brand, model, serialNumber, productType, category, priority, message });
+    const newDisplayId = `TKT-${String(newSpId).padStart(4, '0')}`;
     await refreshAllData();
-    state.selectedId = `TKT-${String(newSpId).padStart(4, '0')}`;
+    state.selectedId = newDisplayId;
     state.view = 'tickets';
     state.statusFilter = 'all';
     state.showNewTicket = false;
     render();
+    sendNotificationMail(
+      `Nieuw ticket aangemaakt: ${newDisplayId}`,
+      `<p>Er is een nieuw ticket aangemaakt.</p><p><b>Ticket:</b> ${newDisplayId}<br/><b>Onderwerp:</b> ${esc(subject)}<br/><b>Klant:</b> ${esc(customer)} (${esc(company)})<br/><b>Prioriteit:</b> ${PRIORITY_TO_NL[priority]}</p><p><a href="${MSAL_CONFIG.auth.redirectUri}">Open het ticketsysteem</a></p>`
+    );
   } catch (e) {
     showBannerError(e);
     btn.disabled = false; btn.textContent = 'Ticket aanmaken';
