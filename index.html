@@ -283,7 +283,7 @@ async function getToken() {
   }
 }
 
-async function graphFetch(path, options = {}) {
+async function graphFetch(path, options = {}, isRetry = false) {
   const token = await getToken();
   const res = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
     ...options,
@@ -294,6 +294,10 @@ async function graphFetch(path, options = {}) {
     },
   });
   if (!res.ok) {
+    if ((res.status === 503 || res.status === 429 || res.status === 504) && !isRetry) {
+      await new Promise(r => setTimeout(r, 1500));
+      return graphFetch(path, options, true);
+    }
     let detail = '';
     try { detail = (await res.json()).error?.message || ''; } catch (e) {}
     throw new Error(`Graph API fout (${res.status}) op ${path}. ${detail}`);
@@ -304,6 +308,16 @@ async function graphFetch(path, options = {}) {
 }
 
 async function resolveSiteAndLists() {
+  const cached = localStorage.getItem('novosonic_ids_v1');
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      if (parsed.siteId && parsed.ticketsListId && parsed.messagesListId) {
+        siteId = parsed.siteId; ticketsListId = parsed.ticketsListId; messagesListId = parsed.messagesListId;
+        return;
+      }
+    } catch (e) { /* fall through to re-resolve */ }
+  }
   const site = await graphFetch(`/sites/${SITE_HOSTNAME}:${SITE_PATH}`);
   siteId = site.id;
   const lists = await graphFetch(`/sites/${siteId}/lists?$select=id,displayName`);
@@ -314,6 +328,9 @@ async function resolveSiteAndLists() {
   }
   ticketsListId = ticketsList.id;
   messagesListId = messagesList.id;
+  try {
+    localStorage.setItem('novosonic_ids_v1', JSON.stringify({ siteId, ticketsListId, messagesListId }));
+  } catch (e) { /* not critical if this fails */ }
 }
 
 async function fetchTicketsFromGraph() {
@@ -378,6 +395,7 @@ async function bootApp() {
 }
 
 async function retryBoot() {
+  localStorage.removeItem('novosonic_ids_v1');
   appState = 'checking';
   render();
   await bootApp();
