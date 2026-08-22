@@ -90,6 +90,13 @@
   .status-btn{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:6px 10px;border-radius:6px;background:transparent;border:1px solid transparent;color:var(--text3);}
   .status-btn.active{background:var(--surface-hover);border:1px solid var(--border-light);}
   .meta-row{display:flex;gap:20px;margin-top:14px;flex-wrap:wrap;align-items:center;}
+  .internal-note{margin:0 16px 14px;padding:12px 14px;background:rgba(255,180,84,0.08);border:1px dashed var(--medium);border-radius:8px;}
+  .internal-note-label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--medium);font-weight:600;margin-bottom:8px;}
+  .internal-note-hint{text-transform:none;letter-spacing:normal;color:var(--text3);font-weight:400;}
+  .internal-note textarea{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--text);font-size:13px;resize:vertical;font-family:inherit;}
+  .internal-note button{margin-top:8px;background:transparent;border:1px solid var(--medium);color:var(--medium);border-radius:6px;padding:6px 14px;font-size:12.5px;font-weight:600;}
+  .internal-note button.ready{background:var(--medium);color:#2b1900;}
+  .internal-note button:disabled{opacity:.5;}
   .meta-item{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text2);}
   .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 24px;margin-top:16px;padding:16px 18px;background:var(--surface);border:1px solid var(--border);border-radius:10px;}
   .info-field{display:flex;flex-direction:column;gap:3px;min-width:0;}
@@ -349,6 +356,7 @@ async function fetchTicketsFromGraph() {
     category: item.fields.Categorie || '',
     priority: PRIORITY_FROM_NL[(item.fields.Prioriteit || '').toLowerCase()] || 'medium',
     status: STATUS_FROM_NL[(item.fields.Status || '').toLowerCase()] || 'open',
+    internalNote: item.fields.InterneNotities || '',
     created: item.createdDateTime,
     updated: item.lastModifiedDateTime,
     messages: [],
@@ -529,6 +537,30 @@ async function sendReply() {
       `<p>Er is een nieuwe reactie toegevoegd aan ticket <b>${t.id}</b> (${esc(t.subject)}) door ${esc((account && account.name) || 'Support')}.</p><p><a href="${MSAL_CONFIG.auth.redirectUri}">Open het ticketsysteem</a></p>`
     );
   } catch (e) { showBannerError(e); btn.disabled = false; }
+}
+
+async function saveInternalNote(id) {
+  const t = state.tickets.find(x => x.id === id); if (!t) return;
+  const textarea = document.getElementById('internalNoteInput');
+  const text = textarea.value;
+  const btn = document.getElementById('internalNoteSaveBtn');
+  btn.disabled = true; btn.textContent = 'Opslaan…';
+  try {
+    await updateTicketFieldsInGraph(t.spId, { InterneNotities: text });
+    t.internalNote = text;
+    btn.textContent = 'Opgeslagen ✓';
+    setTimeout(() => { btn.disabled = false; btn.textContent = 'Opslaan'; }, 1500);
+  } catch (e) {
+    showBannerError(e);
+    btn.disabled = false; btn.textContent = 'Opslaan';
+  }
+}
+function onInternalNoteInput(id) {
+  const t = state.tickets.find(x => x.id === id);
+  const textarea = document.getElementById('internalNoteInput');
+  const btn = document.getElementById('internalNoteSaveBtn');
+  if (t && textarea.value !== t.internalNote) { btn.disabled = false; btn.classList.add('ready'); }
+  else { btn.classList.remove('ready'); }
 }
 
 function openNewTicket() { state.showNewTicket = true; render(); }
@@ -717,6 +749,11 @@ function render() {
               </div>
             </div>
           </div>
+        </div>
+        <div class="internal-note">
+          <div class="internal-note-label">🔒 Interne notities <span class="internal-note-hint">— alleen zichtbaar in dit systeem, klant ziet dit nooit</span></div>
+          <textarea id="internalNoteInput" rows="3" placeholder="Aantekeningen voor intern gebruik…" oninput="onInternalNoteInput('${selected.id}')">${esc(selected.internalNote)}</textarea>
+          <button id="internalNoteSaveBtn" onclick="saveInternalNote('${selected.id}')" disabled>Opslaan</button>
         </div>
         <div class="messages" id="messagesScroll">
           <div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);font-weight:600;padding-bottom:4px;">Communicatie</div>
