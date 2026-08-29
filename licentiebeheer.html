@@ -56,13 +56,16 @@
   .btn-small{padding:6px 10px;font-size:12.5px;}
 
   /* Stat cards */
-  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px;}
+  .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:22px;}
   .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);}
   .stat .num{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700;line-height:1;}
   .stat .lbl{color:var(--ink-soft);font-size:12px;margin-top:6px;}
   .stat.warn .num{color:var(--amber);}
   .stat.danger .num{color:var(--red);}
   .stat.ok .num{color:var(--green);}
+  .stat.value{background:var(--accent);}
+  .stat.value .num{color:#fff;font-size:20px;}
+  .stat.value .lbl{color:rgba(255,255,255,0.75);}
 
   /* Toolbar */
   .toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:14px;flex-wrap:wrap;}
@@ -196,6 +199,7 @@
     <div class="stat ok"><div class="num" id="statOk">0</div><div class="lbl">Loopt normaal door</div></div>
     <div class="stat warn"><div class="num" id="statWarn">0</div><div class="lbl">Verloopt binnenkort</div></div>
     <div class="stat danger"><div class="num" id="statExpired">0</div><div class="lbl">Al verlopen</div></div>
+    <div class="stat value"><div class="num" id="statValue">€0</div><div class="lbl">Totale verkoopwaarde</div></div>
   </div>
 
   <div class="toolbar">
@@ -234,6 +238,7 @@
           <th>Organisatie</th>
           <th>Klant</th>
           <th>Licentie</th>
+          <th>Aantal</th>
           <th>Ingang</th>
           <th>Einddatum</th>
           <th>Looptijd</th>
@@ -290,7 +295,10 @@
       </div>
 
       <div class="form-section-title">Licentie &amp; looptijd</div>
-      <div class="field"><label>Soort licentie</label><input type="text" id="f_licentie" placeholder="bijv. Clevertouch licentie, i3 Connect, Novosonic Ticketsysteem"></div>
+      <div class="grid2">
+        <div class="field"><label>Soort licentie</label><input type="text" id="f_licentie" placeholder="bijv. Clevertouch licentie, i3 Connect, Novosonic Ticketsysteem"></div>
+        <div class="field"><label>Aantal licentie(s)</label><input type="number" id="f_aantal_licenties" value="1" min="1"></div>
+      </div>
       <div class="grid3">
         <div class="field"><label>Ingangsdatum</label><input type="date" id="f_ingang"></div>
         <div class="field"><label>Looptijd (aantal)</label><input type="number" id="f_looptijd_aantal" value="1" min="1"></div>
@@ -309,9 +317,13 @@
 
       <div class="form-section-title">Prijzen</div>
       <div class="grid3">
-        <div class="field"><label>Verkoopprijs (€)</label><input type="number" id="f_verkoop" step="0.01" min="0" placeholder="0,00"></div>
-        <div class="field"><label>Inkoopprijs (€)</label><input type="number" id="f_inkoop" step="0.01" min="0" placeholder="0,00"></div>
-        <div class="field"><label>Marge</label><input type="text" id="f_marge_preview" disabled placeholder="wordt berekend"></div>
+        <div class="field"><label>Verkoopprijs per stuk (€)</label><input type="number" id="f_verkoop" step="0.01" min="0" placeholder="0,00"></div>
+        <div class="field"><label>Inkoopprijs per stuk (€)</label><input type="number" id="f_inkoop" step="0.01" min="0" placeholder="0,00"></div>
+        <div class="field"><label>Marge per stuk</label><input type="text" id="f_marge_preview" disabled placeholder="wordt berekend"></div>
+      </div>
+      <div class="end-date-preview" style="margin-top:10px;">
+        <span>Totale orderwaarde (verkoop × aantal)</span>
+        <span id="totalValuePreview">—</span>
       </div>
 
       <div class="form-section-title">Notities</div>
@@ -438,6 +450,7 @@
       klant_postcode: f.KlantPostcode || '',
       klant_plaats: f.KlantPlaats || '',
       licentie: f.LicentieType || '',
+      aantal_licenties: Number(f.AantalLicenties) || 1,
       ingang: fromGraphDate(f.Ingangsdatum),
       looptijd_aantal: Number(f.LooptijdAantal) || 1,
       looptijd_eenheid: (f.LooptijdEenheid || 'Jaar').toLowerCase(),
@@ -460,6 +473,7 @@
       KlantPostcode: lic.klant_postcode,
       KlantPlaats: lic.klant_plaats,
       LicentieType: lic.licentie,
+      AantalLicenties: lic.aantal_licenties,
       Ingangsdatum: toGraphDate(lic.ingang),
       EindDatum: end ? toGraphDate(toISO(end)) : null,
       LooptijdAantal: lic.looptijd_aantal,
@@ -652,11 +666,12 @@
           <div class="klant-sub">${escapeHtml(lic.klant_plaats || '')}</div>
         </td>
         <td data-label="Licentie">${escapeHtml(lic.licentie || '—')}</td>
+        <td data-label="Aantal" class="mono">${lic.aantal_licenties || 1}</td>
         <td data-label="Ingang" class="mono">${fmtDate(lic.ingang)}</td>
         <td data-label="Einddatum" class="mono">${fmtDate(end)}</td>
         <td data-label="Looptijd">${lic.looptijd_aantal} ${labelEenheid(lic.looptijd_eenheid, lic.looptijd_aantal)}</td>
-        <td data-label="Verkoop" class="price-cell">${fmtEUR(lic.verkoop)}</td>
-        <td data-label="Marge" class="price-cell margin-cell">${marginVisible ? (marge !== null ? fmtEUR(marge) : '—') : '••••'}</td>
+        <td data-label="Verkoop" class="price-cell">${fmtEUR(lic.verkoop)}${(lic.aantal_licenties || 1) > 1 ? `<br><span class="klant-sub">totaal ${fmtEUR((Number(lic.verkoop)||0) * (lic.aantal_licenties || 1))}</span>` : ''}</td>
+        <td data-label="Marge" class="price-cell margin-cell">${marginVisible ? (marge !== null ? fmtEUR(marge * (lic.aantal_licenties || 1)) : '—') : '••••'}</td>
         <td data-label="Status"><span class="status-badge status-${status.key}"><span class="status-dot"></span>${status.label}${status.days !== null ? ` · ${status.days < 0 ? Math.abs(status.days) + 'd geleden' : status.days + 'd'}` : ''}</span></td>
         <td data-label="Acties">
           <div class="row-actions">
@@ -675,6 +690,9 @@
     $('statOk').textContent = statuses.filter(s => s.key === 'ok').length;
     $('statWarn').textContent = statuses.filter(s => s.key === 'warn').length;
     $('statExpired').textContent = statuses.filter(s => s.key === 'danger').length;
+
+    const totalValue = licenses.reduce((sum, l) => sum + ((l.verkoop === '' || isNaN(l.verkoop) ? 0 : Number(l.verkoop)) * (l.aantal_licenties || 1)), 0);
+    $('statValue').textContent = fmtEUR(totalValue);
 
     // reminder banner
     const dueSoon = licenses.filter(l => ['warn','danger'].includes(getStatus(l).key));
@@ -718,6 +736,7 @@
       $('f_klant_postcode').value = lic.klant_postcode || '';
       $('f_klant_plaats').value = lic.klant_plaats || '';
       $('f_licentie').value = lic.licentie || '';
+      $('f_aantal_licenties').value = lic.aantal_licenties || 1;
       $('f_ingang').value = lic.ingang || '';
       $('f_looptijd_aantal').value = lic.looptijd_aantal || 1;
       $('f_looptijd_eenheid').value = lic.looptijd_eenheid || 'jaar';
@@ -729,6 +748,7 @@
       $('editIntro').style.display = 'none';
       ['f_order','f_klant_naam','f_klant_email','f_klant_straat','f_klant_telefoon','f_klant_postcode','f_klant_plaats','f_licentie','f_ingang','f_verkoop','f_inkoop','f_notities'].forEach(id => $(id).value = '');
       $('f_org').value = 'LMS Distribution';
+      $('f_aantal_licenties').value = 1;
       $('f_looptijd_aantal').value = 1;
       $('f_looptijd_eenheid').value = 'jaar';
       $('f_ingang').value = toISO(new Date());
@@ -746,6 +766,7 @@
 
     const verkoop = parseFloat($('f_verkoop').value);
     const inkoop = parseFloat($('f_inkoop').value);
+    const aantal = Number($('f_aantal_licenties').value) || 1;
     if(!isNaN(verkoop) && !isNaN(inkoop)){
       const marge = verkoop - inkoop;
       const pct = verkoop !== 0 ? (marge/verkoop*100).toFixed(1) : '0';
@@ -753,9 +774,10 @@
     } else {
       $('f_marge_preview').value = '';
     }
+    $('totalValuePreview').textContent = !isNaN(verkoop) ? fmtEUR(verkoop * aantal) : '—';
   }
 
-  ['f_ingang','f_looptijd_aantal','f_looptijd_eenheid','f_verkoop','f_inkoop'].forEach(id => {
+  ['f_ingang','f_looptijd_aantal','f_looptijd_eenheid','f_verkoop','f_inkoop','f_aantal_licenties'].forEach(id => {
     $(id).addEventListener('input', updatePreview);
   });
 
@@ -776,6 +798,7 @@
       klant_postcode: $('f_klant_postcode').value.trim(),
       klant_plaats: $('f_klant_plaats').value.trim(),
       licentie: $('f_licentie').value.trim(),
+      aantal_licenties: Number($('f_aantal_licenties').value) || 1,
       ingang: ingang,
       looptijd_aantal: Number($('f_looptijd_aantal').value) || 1,
       looptijd_eenheid: $('f_looptijd_eenheid').value,
@@ -831,7 +854,7 @@
       `Organisatie: ${orgNaam}`,
       `Ordernummer: ${lic.ordernummer}`,
       `Klant: ${lic.klant_naam || '—'}`,
-      `Licentie: ${lic.licentie || '—'}`,
+      `Licentie: ${lic.licentie || '—'} (${lic.aantal_licenties || 1}x)`,
       `Ingangsdatum: ${fmtDate(lic.ingang)}`,
       `Einddatum: ${fmtDate(end)}`,
       `Looptijd: ${lic.looptijd_aantal} ${labelEenheid(lic.looptijd_eenheid, lic.looptijd_aantal)}`,
