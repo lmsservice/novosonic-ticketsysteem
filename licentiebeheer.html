@@ -766,7 +766,7 @@
 
     const verkoop = parseFloat($('f_verkoop').value);
     const inkoop = parseFloat($('f_inkoop').value);
-    const aantal = Number($('f_aantal_licenties').value) || 1;
+    const aantalLic = Number($('f_aantal_licenties').value) || 1;
     if(!isNaN(verkoop) && !isNaN(inkoop)){
       const marge = verkoop - inkoop;
       const pct = verkoop !== 0 ? (marge/verkoop*100).toFixed(1) : '0';
@@ -774,7 +774,7 @@
     } else {
       $('f_marge_preview').value = '';
     }
-    $('totalValuePreview').textContent = !isNaN(verkoop) ? fmtEUR(verkoop * aantal) : '—';
+    $('totalValuePreview').textContent = !isNaN(verkoop) ? fmtEUR(verkoop * aantalLic) : '—';
   }
 
   ['f_ingang','f_looptijd_aantal','f_looptijd_eenheid','f_verkoop','f_inkoop','f_aantal_licenties'].forEach(id => {
