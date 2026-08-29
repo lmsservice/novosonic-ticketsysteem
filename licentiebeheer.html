@@ -461,7 +461,7 @@
       KlantPlaats: lic.klant_plaats,
       LicentieType: lic.licentie,
       Ingangsdatum: toGraphDate(lic.ingang),
-      Einddatum: end ? toGraphDate(toISO(end)) : null,
+      EindDatum: end ? toGraphDate(toISO(end)) : null,
       LooptijdAantal: lic.looptijd_aantal,
       LooptijdEenheid: eenheidLabel,
       Verkoopprijs: lic.verkoop === '' ? null : lic.verkoop,
